@@ -1,6 +1,7 @@
 package com.dk.sbucod.task;
 
 
+import com.dk.sbucod.EmptyCandleException;
 import com.dk.sbucod.constants.UpbitCoinCode;
 import com.dk.sbucod.entity.AbstractCandle;
 import com.dk.sbucod.service.UpbitCandleService;
@@ -31,10 +32,9 @@ public class InitialTask implements ApplicationRunner {
         }
 
 
-
     }
 
-    private void saveCandles(UpbitCoinCode code) throws InterruptedException, JsonProcessingException {
+    private void saveCandles(UpbitCoinCode code) throws InterruptedException, JsonProcessingException, EmptyCandleException {
         String c = code.toString();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         long nowTimestmp = System.currentTimeMillis();
@@ -44,10 +44,16 @@ public class InitialTask implements ApplicationRunner {
             nowTimestmp -= 1000 * 60 * 60 * 24;
             System.out.println("iter " + i + "| long : " + nowTimestmp + " | " + sdf.format(nowTimestmp));
             Thread.sleep(1000);
-            AbstractCandle candle = upbitApi.callCandleByDate(c,sdf.format(nowTimestmp));
-            String str = candle.toString();
-            System.out.println(str);
-            upbitCandleService.save(candle);
+            try {
+                AbstractCandle candle = upbitApi.callCandleByDate(c, sdf.format(nowTimestmp));
+                String str = candle.toString();
+                System.out.println(str);
+                upbitCandleService.save(candle);
+            }catch (EmptyCandleException e){
+                log.error("error error on {} , date : {}" , code,nowTimestmp);
+                break;
+            }
+
         }
     }
 }
